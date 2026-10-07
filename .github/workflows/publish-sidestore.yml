@@ -1,0 +1,243 @@
+name: Publish SideStore Build
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'source.json'
+      - 'README.md'
+      - 'LICENSE'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - 'icon.png'
+  workflow_dispatch: {}
+
+concurrency:
+  group: sidestore-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build and publish unsigned IPA
+    runs-on: xcode-27
+    env:
+      PROJECT_PATH: CostcoTracker.xcodeproj
+      SCHEME: CostcoTracker
+      CONFIGURATION: Release
+      APP_NAME: CostcoTracker
+      REPO: ${{ github.repository }}
+      DERIVED_DATA_PATH: ${{ github.workspace }}/DerivedData
+      BUILD_OUTPUT_DIR: ${{ github.workspace }}/SideStoreBuild
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Compute build version
+        id: version
+        run: |
+          set -euo pipefail
+          RUN_NUMBER="${GITHUB_RUN_NUMBER}"
+          VERSION="1.1.${RUN_NUMBER}"
+          echo "Marketing version: ${VERSION}"
+          echo "Build number: ${RUN_NUMBER}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "build_number=${RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Build unsigned device app
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$BUILD_OUTPUT_DIR"
+
+          xcodebuild \
+            -project "$PROJECT_PATH" \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIGURATION" \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$DERIVED_DATA_PATH" \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            clean build
+
+      - name: Locate built app
+        id: locate_app
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find "$DERIVED_DATA_PATH/Build/Products" -maxdepth 2 -name "${APP_NAME}.app" -type d | head -n 1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::${APP_NAME}.app was not found under $DERIVED_DATA_PATH/Build/Products"
+            exit 1
+          fi
+
+          echo "Found app at: $APP_PATH"
+          echo "app_path=${APP_PATH}" >> "$GITHUB_OUTPUT"
+
+      - name: Package IPA
+        id: package
+        env:
+          APP_PATH: ${{ steps.locate_app.outputs.app_path }}
+        run: |
+          set -euo pipefail
+          PAYLOAD_DIR="$BUILD_OUTPUT_DIR/Payload"
+          IPA_PATH="$BUILD_OUTPUT_DIR/${APP_NAME}.ipa"
+
+          rm -rf "$PAYLOAD_DIR" "$IPA_PATH"
+          mkdir -p "$PAYLOAD_DIR"
+
+          cp -R "$APP_PATH" "$PAYLOAD_DIR/"
+
+          (cd "$BUILD_OUTPUT_DIR" && zip -r -X -y "${APP_NAME}.ipa" "Payload" >/dev/null)
+
+          echo "ipa_path=${IPA_PATH}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate built app and IPA
+        id: validate
+        env:
+          APP_PATH: ${{ steps.locate_app.outputs.app_path }}
+          IPA_PATH: ${{ steps.package.outputs.ipa_path }}
+          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
+          EXPECTED_BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "::error::Built app does not exist at $APP_PATH"
+            exit 1
+          fi
+
+          INFO_PLIST="$APP_PATH/Info.plist"
+          if [ ! -f "$INFO_PLIST" ]; then
+            echo "::error::Info.plist not found at $INFO_PLIST"
+            exit 1
+          fi
+
+          read_plist_value() {
+            /usr/libexec/PlistBuddy -c "Print :$1" "$INFO_PLIST" 2>/dev/null || true
+          }
+
+          BUNDLE_ID=$(read_plist_value CFBundleIdentifier)
+          SHORT_VERSION=$(read_plist_value CFBundleShortVersionString)
+          BUILD_NUMBER=$(read_plist_value CFBundleVersion)
+          MIN_OS_VERSION=$(read_plist_value MinimumOSVersion)
+
+          if [ -z "$BUNDLE_ID" ]; then
+            echo "::error::CFBundleIdentifier is empty"
+            exit 1
+          fi
+
+          if [ "$SHORT_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::CFBundleShortVersionString ($SHORT_VERSION) does not match expected version ($EXPECTED_VERSION)"
+            exit 1
+          fi
+
+          if [ "$BUILD_NUMBER" != "$EXPECTED_BUILD_NUMBER" ]; then
+            echo "::error::CFBundleVersion ($BUILD_NUMBER) does not match expected build number ($EXPECTED_BUILD_NUMBER)"
+            exit 1
+          fi
+
+          if [ ! -f "$IPA_PATH" ]; then
+            echo "::error::${APP_NAME}.ipa does not exist at $IPA_PATH"
+            exit 1
+          fi
+
+          IPA_SIZE=$(stat -f%z "$IPA_PATH")
+          if [ "$IPA_SIZE" -eq 0 ]; then
+            echo "::error::${APP_NAME}.ipa is zero bytes"
+            exit 1
+          fi
+
+          if find "$APP_PATH" -iname "AGENTS.md" | grep -q .; then
+            echo "::error::AGENTS.md was found inside the built app bundle. Refusing to publish."
+            find "$APP_PATH" -iname "AGENTS.md"
+            exit 1
+          fi
+
+          echo "Bundle ID: $BUNDLE_ID"
+          echo "Marketing version: $SHORT_VERSION"
+          echo "Build number: $BUILD_NUMBER"
+          echo "Minimum OS version: ${MIN_OS_VERSION:-unknown}"
+          echo "IPA size: $IPA_SIZE bytes"
+
+          echo "bundle_id=${BUNDLE_ID}" >> "$GITHUB_OUTPUT"
+          echo "min_os_version=${MIN_OS_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ipa_size=${IPA_SIZE}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          IPA_PATH: ${{ steps.package.outputs.ipa_path }}
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION}"
+
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; replacing the IPA asset."
+            gh release upload "$TAG" "$IPA_PATH" --repo "$REPO" --clobber
+          else
+            echo "Creating release $TAG."
+            gh release create "$TAG" "$IPA_PATH" \
+              --repo "$REPO" \
+              --title "${APP_NAME} ${VERSION}" \
+              --notes "Automated SideStore build ${VERSION}."
+          fi
+
+          echo "download_url=https://github.com/${REPO}/releases/download/${TAG}/${APP_NAME}.ipa" >> "$GITHUB_OUTPUT"
+
+      - name: Update source.json
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUNDLE_ID: ${{ steps.validate.outputs.bundle_id }}
+          MIN_OS_VERSION: ${{ steps.validate.outputs.min_os_version }}
+          IPA_SIZE: ${{ steps.validate.outputs.ipa_size }}
+          DOWNLOAD_URL: ${{ steps.release.outputs.download_url }}
+        run: |
+          set -euo pipefail
+          RELEASE_DATE=$(date -u +%Y-%m-%d)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_SUBJECT=$(git log -1 --pretty=%s)
+
+          MIN_OS_ARGS=()
+          if [ -n "${MIN_OS_VERSION:-}" ]; then
+            MIN_OS_ARGS=(--min-os-version "$MIN_OS_VERSION")
+          fi
+
+          python3 .github/scripts/update_sidestore_source.py \
+            --source-json source.json \
+            --bundle-identifier "$BUNDLE_ID" \
+            --version "$VERSION" \
+            --date "$RELEASE_DATE" \
+            --download-url "$DOWNLOAD_URL" \
+            --size "$IPA_SIZE" \
+            --release-description "Automated build from ${SHORT_SHA}: ${COMMIT_SUBJECT}" \
+            "${MIN_OS_ARGS[@]}"
+
+      - name: Commit and push source.json
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add source.json
+
+          if git diff --cached --quiet; then
+            echo "source.json is already up to date; nothing to commit."
+            exit 0
+          fi
+
+          git commit -m "Publish ${APP_NAME} ${VERSION} [skip ci]"
+          git push origin HEAD:main
