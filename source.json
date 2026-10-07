@@ -1,0 +1,40 @@
+{
+  "name": "CostcoTracker",
+  "identifier": "com.diggitydogg.costcotracker.source",
+  "sourceURL": "https://raw.githubusercontent.com/diggitydogg/CostcoTracker/main/source.json",
+  "apps": [
+    {
+      "name": "CostcoTracker",
+      "bundleIdentifier": "com.danmcgoldrick.CostcoTracker",
+      "developerName": "Dan McGoldrick",
+      "subtitle": "Track Costco purchases, prices and returns.",
+      "localizedDescription": "Track Costco purchase history, price changes, potential price matches, returns, receipts and recorded price adjustments.",
+      "iconURL": "https://raw.githubusercontent.com/diggitydogg/CostcoTracker/main/icon.png",
+      "tintColor": "#005DAA",
+      "permissions": [
+        {
+          "type": "camera",
+          "usageDescription": "CostcoTracker uses the camera to scan Costco items and receipts."
+        },
+        {
+          "type": "photos",
+          "usageDescription": "CostcoTracker can save receipt and price-match cards to your photo library."
+        },
+        {
+          "type": "network",
+          "usageDescription": "CostcoTracker uses network access to securely sync Costco purchase and order information."
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.1.1",
+          "date": "2026-10-07",
+          "downloadURL": "https://github.com/diggitydogg/CostcoTracker/releases/download/v1.1.1/CostcoTracker.ipa",
+          "size": 5864898,
+          "localizedDescription": "Automated build from c3edc3d: Initial open source release",
+          "minOSVersion": "27.0"
+        }
+      ]
+    }
+  ]
+}
