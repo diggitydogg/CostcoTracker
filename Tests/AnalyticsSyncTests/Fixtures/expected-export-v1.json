@@ -1,0 +1,235 @@
+{
+  "export": {
+    "format": "costcotracker-analytics",
+    "formatVersion": 1,
+    "exportedAt": "2026-11-01T12:00:00Z",
+    "currency": "USD",
+    "receipts": [
+      {
+        "id": "r_9CUCzaBNj0S7E10WPShmWI",
+        "sourceType": "warehouse",
+        "identifierKind": "transactionBarcode",
+        "purchaseDate": null,
+        "warehouse": null
+      },
+      {
+        "id": "r_JtTAM_CQZknqFzL4qG86wh",
+        "sourceType": "online",
+        "identifierKind": "onlineOrderKey",
+        "purchaseDate": "2026-02-09",
+        "warehouse": "Online Order (Fulfilling Whse #9001)"
+      },
+      {
+        "id": "r_ODgU8ZDNo4dd0XAgrgwzdg",
+        "sourceType": "warehouse",
+        "identifierKind": "transactionBarcode",
+        "purchaseDate": null,
+        "warehouse": "Warehouse"
+      },
+      {
+        "id": "r_YWpAbbf-K7axt_A1igxbiT",
+        "sourceType": "warehouse",
+        "identifierKind": "transactionBarcode",
+        "purchaseDate": "2026-01-04",
+        "warehouse": "SYNTHETIC NORTH"
+      },
+      {
+        "id": "r_pVjhKpKG_Gi0IRNjakVJWN",
+        "sourceType": "warehouse",
+        "identifierKind": "synthesizedWarehouseKey",
+        "purchaseDate": "2026-01-18",
+        "warehouse": "SYNTHETIC SOUTH"
+      }
+    ],
+    "items": [
+      {
+        "id": "i_3ckliMeuGWUPEHnYjirtCi",
+        "purchaseId": "r_JtTAM_CQZknqFzL4qG86wh",
+        "itemNumber": "9000005",
+        "description": "SYNTHETIC DESK LAMP",
+        "quantity": 1,
+        "lineTotalCents": 3999,
+        "unitPriceCents": 3999
+      },
+      {
+        "id": "i_DDqF8Bd9LGnBKtpT2l55xm",
+        "purchaseId": "r_pVjhKpKG_Gi0IRNjakVJWN",
+        "itemNumber": "9000003",
+        "description": "SYNTHETIC GROUND COFFEE",
+        "quantity": 1,
+        "lineTotalCents": 1499,
+        "unitPriceCents": 1499
+      },
+      {
+        "id": "i_EOIwNTj8pY5YBuqyIqB9Xh",
+        "purchaseId": "r_YWpAbbf-K7axt_A1igxbiT",
+        "itemNumber": "9000002",
+        "description": "SYNTHETIC BANANAS 3LB",
+        "quantity": 2,
+        "lineTotalCents": 298,
+        "unitPriceCents": 149
+      },
+      {
+        "id": "i_FpXNT7CEIP5PcvSj5kX7fX",
+        "purchaseId": "r_ODgU8ZDNo4dd0XAgrgwzdg",
+        "itemNumber": "9000006",
+        "description": "",
+        "quantity": 3,
+        "lineTotalCents": 1000,
+        "unitPriceCents": null
+      },
+      {
+        "id": "i_GIIVdbogzUr9zcpkJ8nrw0",
+        "purchaseId": "r_9CUCzaBNj0S7E10WPShmWI",
+        "itemNumber": "9000007",
+        "description": "SYNTHETIC BATTERIES",
+        "quantity": 2,
+        "lineTotalCents": 0,
+        "unitPriceCents": 0
+      },
+      {
+        "id": "i_ZIuuQgyQk59jMjmj_nx8U0",
+        "purchaseId": "r_pVjhKpKG_Gi0IRNjakVJWN",
+        "itemNumber": "9000001",
+        "description": "SYNTHETIC PAPER TOWELS 12PK",
+        "quantity": 1,
+        "lineTotalCents": 2299,
+        "unitPriceCents": 2299
+      },
+      {
+        "id": "i_gGEE9-5PDHVVvG0p_pUoOy",
+        "purchaseId": "r_YWpAbbf-K7axt_A1igxbiT",
+        "itemNumber": "9000001",
+        "description": "SYNTHETIC PAPER TOWELS 12PK",
+        "quantity": 1,
+        "lineTotalCents": 2199,
+        "unitPriceCents": 2199
+      },
+      {
+        "id": "i_xCrF_cUn55ZasKm1o4WNsd",
+        "purchaseId": "r_pVjhKpKG_Gi0IRNjakVJWN",
+        "itemNumber": "9000004",
+        "description": "SYNTHETIC LOOSE PRODUCE",
+        "quantity": 1.37,
+        "lineTotalCents": 411,
+        "unitPriceCents": 300
+      },
+      {
+        "id": "i_zaHdQhNsKZ4BxxjZnJsWdO",
+        "purchaseId": "r_JtTAM_CQZknqFzL4qG86wh",
+        "itemNumber": "9000005",
+        "description": "SYNTHETIC DESK LAMP",
+        "quantity": 1,
+        "lineTotalCents": 3999,
+        "unitPriceCents": 3999
+      }
+    ],
+    "returns": [
+      {
+        "id": "ret_HN8Z4oNeI8wkRlK3pOeLJW",
+        "transactionId": "t_rri_VXEabecuic6gZsDan8",
+        "itemNumber": "9000001",
+        "returnDate": "2026-02-20",
+        "warehouse": "SYNTHETIC NORTH",
+        "quantity": 1,
+        "description": "SYNTHETIC PAPER TOWELS 12PK",
+        "transactionType": "Refund",
+        "merchandiseAmountCents": 2199,
+        "transactionTotalCents": -6650,
+        "sourcePurchaseId": null
+      },
+      {
+        "id": "ret_dY5ASGlgIzdnEDCCrDgpnG",
+        "transactionId": "t_rri_VXEabecuic6gZsDan8",
+        "itemNumber": "9000005",
+        "returnDate": "2026-02-20",
+        "warehouse": "SYNTHETIC NORTH",
+        "quantity": 1,
+        "description": "SYNTHETIC DESK LAMP",
+        "transactionType": "Refund",
+        "merchandiseAmountCents": 3999,
+        "transactionTotalCents": -6650,
+        "sourcePurchaseId": null
+      },
+      {
+        "id": "ret_e_7Earsd2O3B7urKsHwbUT",
+        "transactionId": "t_AjVpyt5CWYE3npssu4mJFD",
+        "itemNumber": "9000002",
+        "returnDate": "2026-02-01",
+        "warehouse": "SYNTHETIC SOUTH",
+        "quantity": 0.5,
+        "description": null,
+        "transactionType": "Sales",
+        "merchandiseAmountCents": null,
+        "transactionTotalCents": null,
+        "sourcePurchaseId": null
+      },
+      {
+        "id": "ret_q_-1G4pGknHnB73woxGi_X",
+        "transactionId": "t_Yf0rdGLgYWAwqELVs13tEB",
+        "itemNumber": "9000003",
+        "returnDate": "2026-03-01",
+        "warehouse": "SYNTHETIC NORTH",
+        "quantity": 1,
+        "description": "SYNTHETIC GROUND COFFEE",
+        "transactionType": null,
+        "merchandiseAmountCents": 1499,
+        "transactionTotalCents": -1499,
+        "sourcePurchaseId": null
+      }
+    ],
+    "priceAdjustments": [
+      {
+        "id": "adj_EpYhphk55dxijTgG2M_Hth",
+        "transactionId": "t_eioDVboT2E6e0v5Ld-M-kR",
+        "itemNumber": "9000002",
+        "adjustmentDate": "2026-02-10",
+        "warehouse": "SYNTHETIC NORTH",
+        "amountCents": 150,
+        "adjustedQuantity": 2,
+        "referenceLineNumbers": [
+          "9100002",
+          "9100003"
+        ],
+        "transactionType": "Sales",
+        "transactionTotalCents": -150,
+        "sourcePurchaseId": null
+      },
+      {
+        "id": "adj_In879jS8o178EECR7ftiRM",
+        "transactionId": "t_Ikvo2-r6QxVL9jb7-kdg2g",
+        "itemNumber": "9000003",
+        "adjustmentDate": null,
+        "warehouse": null,
+        "amountCents": 500,
+        "adjustedQuantity": null,
+        "referenceLineNumbers": [],
+        "transactionType": null,
+        "transactionTotalCents": -500,
+        "sourcePurchaseId": null
+      },
+      {
+        "id": "adj_j4sQs1cpSr7fznaR8iga9g",
+        "transactionId": "t_hvWx0R3jva925peyDpaJXN",
+        "itemNumber": "9000001",
+        "adjustmentDate": "2026-01-25",
+        "warehouse": "SYNTHETIC SOUTH",
+        "amountCents": 300,
+        "adjustedQuantity": 1,
+        "referenceLineNumbers": [
+          "9100001"
+        ],
+        "transactionType": "Sales",
+        "transactionTotalCents": -300,
+        "sourcePurchaseId": null
+      }
+    ]
+  },
+  "exclusions": {
+    "receipt.missingKey": 1,
+    "item.invalidQuantity": 1,
+    "item.orphan": 1,
+    "item.missingItemNumber": 1,
+    "transaction.inconsistent": 2
+  }
+}

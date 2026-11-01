@@ -123,6 +123,19 @@ final class AppDelegate:
 
     func application(
         _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions:
+            [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+
+        // CostcoTracker Analytics: best-effort background request checks.
+        AnalyticsCloudAppSupport.registerBackgroundRefresh()
+
+        return true
+    }
+
+
+    func application(
+        _ application: UIApplication,
         supportedInterfaceOrientationsFor window:
             UIWindow?
     ) -> UIInterfaceOrientationMask {
@@ -136,6 +149,9 @@ final class AppDelegate:
 // MARK: - Main App Tabs
 
 struct CostcoTrackerRootView: View {
+
+    @Environment(\.scenePhase)
+    private var scenePhase
 
     var body: some View {
 
@@ -184,6 +200,23 @@ struct CostcoTrackerRootView: View {
 
             OrientationManager.shared
                 .lockToPortrait()
+        }
+        // CostcoTracker Analytics: resume interrupted uploads and pick up
+        // website sync requests at launch and whenever the app returns.
+        .onChange(of: scenePhase, initial: true) { _, phase in
+
+            if phase == .active {
+
+                Task {
+                    await AnalyticsCloudSync.shared
+                        .appDidBecomeActive()
+                }
+
+            } else if phase == .background {
+
+                AnalyticsCloudAppSupport
+                    .scheduleBackgroundRefresh()
+            }
         }
     }
 }

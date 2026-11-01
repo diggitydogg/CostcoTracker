@@ -1,0 +1,79 @@
+{
+  "idKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+  "hmacKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "vectors": [
+    {
+      "kind": "receipt",
+      "parts": [
+        "99990000000000000001"
+      ],
+      "expected": "r_YWpAbbf-K7axt_A1igxbiT"
+    },
+    {
+      "kind": "receipt",
+      "parts": [
+        "WHSE_2026-01-18_SYNTHETIC_SOUTH"
+      ],
+      "expected": "r_pVjhKpKG_Gi0IRNjakVJWN"
+    },
+    {
+      "kind": "receipt",
+      "parts": [
+        "SYNTH-ORD-1001"
+      ],
+      "expected": "r_JtTAM_CQZknqFzL4qG86wh"
+    },
+    {
+      "kind": "item",
+      "parts": [
+        "SYNTH-ORD-1001",
+        "9000005",
+        "0"
+      ],
+      "expected": "i_3ckliMeuGWUPEHnYjirtCi"
+    },
+    {
+      "kind": "item",
+      "parts": [
+        "SYNTH-ORD-1001",
+        "9000005",
+        "1"
+      ],
+      "expected": "i_zaHdQhNsKZ4BxxjZnJsWdO"
+    },
+    {
+      "kind": "return",
+      "parts": [
+        "99990000000000000101",
+        "9000005"
+      ],
+      "expected": "ret_dY5ASGlgIzdnEDCCrDgpnG"
+    },
+    {
+      "kind": "adjustment",
+      "parts": [
+        "99990000000000000101",
+        "9000005"
+      ],
+      "expected": "adj_T8j2MYQXn2wUPJ8HMDysOj"
+    },
+    {
+      "kind": "transaction",
+      "parts": [
+        "99990000000000000101"
+      ],
+      "expected": "t_rri_VXEabecuic6gZsDan8"
+    },
+    {
+      "kind": "receipt",
+      "parts": [
+        "ünïcødé ✓"
+      ],
+      "expected": "r_T28yu6DJd2ul1I8FLqQdnn"
+    }
+  ],
+  "rawHmac": {
+    "message": "receipt\u0000abc",
+    "base64url": "BzCsDQ1_ui1Pz1Auf1ck89-29UX-2Ngk-DOFjMY9MEQ"
+  }
+}
