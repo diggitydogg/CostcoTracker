@@ -199,7 +199,7 @@ struct AnalyticsCloudSettingsView: View {
         messageIsError = error
     }
 
-    private static func relative(_ date: Date) -> String {
+    nonisolated private static func relative(_ date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
         return formatter.localizedString(for: date, relativeTo: Date())

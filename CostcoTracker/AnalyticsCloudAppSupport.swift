@@ -58,6 +58,9 @@ enum AnalyticsCloudAppSupport {
         guard case .connected = AnalyticsCloudSync.shared.connection else { return }
         let request = BGAppRefreshTaskRequest(identifier: backgroundTaskIdentifier)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 4 * 60 * 60)
-        try? BGTaskScheduler.shared.submit(request)
+        Task {
+            // Best effort: iOS may refuse (e.g. Background App Refresh is off).
+            try? await BGTaskScheduler.shared.submitTaskRequest(request)
+        }
     }
 }
