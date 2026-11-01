@@ -12,6 +12,7 @@ let appLikeSettings: [SwiftSetting] = [
     .defaultIsolation(MainActor.self),
     .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
     .enableUpcomingFeature("InferIsolatedConformances"),
+    .enableUpcomingFeature("MemberImportVisibility"),
 ]
 
 let package = Package(
