@@ -27,6 +27,14 @@
       ],
       "versions": [
         {
+          "version": "1.1.2",
+          "date": "2026-11-01",
+          "downloadURL": "https://github.com/diggitydogg/CostcoTracker/releases/download/v1.1.2/CostcoTracker.ipa",
+          "size": 6135195,
+          "localizedDescription": "Automated build from e5cc002: Add CostcoTracker Analytics cloud sync client (#1)",
+          "minOSVersion": "27.0"
+        },
+        {
           "version": "1.1.1",
           "date": "2026-10-07",
           "downloadURL": "https://github.com/diggitydogg/CostcoTracker/releases/download/v1.1.1/CostcoTracker.ipa",
