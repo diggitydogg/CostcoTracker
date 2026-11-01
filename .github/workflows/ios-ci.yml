@@ -1,0 +1,45 @@
+name: iOS CI
+
+# Build and test only. Never publishes: releases come from publish-sidestore.yml on main.
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    name: Analytics sync tests + app build
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Analytics sync unit tests (swift test on macOS)
+        run: swift test
+
+      - name: Build app (unsigned, generic iOS device)
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project CostcoTracker.xcodeproj \
+            -scheme CostcoTracker \
+            -configuration Debug \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build

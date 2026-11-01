@@ -92,10 +92,24 @@ struct BackupRestoreView: View {
                         .foregroundStyle(statusIsError ? .red : .green)
                 }
 
+                NavigationLink {
+                    AnalyticsCloudSettingsView()
+                } label: {
+                    Label(
+                        "CostcoTracker Analytics",
+                        systemImage: "chart.bar.xaxis"
+                    )
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                }
+                .buttonStyle(.bordered)
+                .disabled(isWorking)
+
                 Spacer()
 
                 Text(
-                    "Backups do not include your Costco sign-in. You'll need to sign in to Costco again after restoring on a new device."
+                    "Backups do not include your Costco sign-in or your CostcoTracker Analytics connection. You'll need to sign in to Costco again, and reconnect to Analytics with a new code, after restoring on a new device."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -205,6 +219,7 @@ struct BackupRestoreView: View {
 
             do {
                 try BackupManager.performRestore(validated)
+                await AnalyticsCloudSync.shared.localDataWasRestored()
                 statusIsError = false
                 statusMessage = "Restore complete."
             } catch {

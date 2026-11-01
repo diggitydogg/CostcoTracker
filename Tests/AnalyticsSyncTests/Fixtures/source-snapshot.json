@@ -1,0 +1,38 @@
+{
+  "_comment": "Synthetic rows shaped exactly like the CostcoTracker SQLite tables. No real receipts, barcodes, or order numbers.",
+  "receipts": [
+    { "barcode": "99990000000000000001", "date": "2026-01-04", "warehouse": "SYNTHETIC NORTH" },
+    { "barcode": "WHSE_2026-01-18_SYNTHETIC_SOUTH", "date": "2026-01-18", "warehouse": "SYNTHETIC SOUTH" },
+    { "barcode": "SYNTH-ORD-1001", "date": "2026-02-09", "warehouse": "Online Order (Fulfilling Whse #9001)" },
+    { "barcode": "99990000000000000004", "date": "", "warehouse": "Warehouse" },
+    { "barcode": "99990000000000000005", "date": "2026-02-30", "warehouse": "" },
+    { "barcode": "", "date": "2026-03-01", "warehouse": "SYNTHETIC NORTH" }
+  ],
+  "items": [
+    { "id": 1, "receipt_barcode": "99990000000000000001", "item_number": "9000001", "description": "SYNTHETIC PAPER TOWELS 12PK", "unit_price": 21.99, "quantity": 1 },
+    { "id": 2, "receipt_barcode": "99990000000000000001", "item_number": "9000002", "description": "SYNTHETIC BANANAS 3LB", "unit_price": 1.49, "quantity": 2 },
+    { "id": 3, "receipt_barcode": "WHSE_2026-01-18_SYNTHETIC_SOUTH", "item_number": "9000001", "description": "SYNTHETIC PAPER TOWELS 12PK", "unit_price": 22.99, "quantity": 1 },
+    { "id": 4, "receipt_barcode": "WHSE_2026-01-18_SYNTHETIC_SOUTH", "item_number": "9000003", "description": "SYNTHETIC GROUND COFFEE", "unit_price": 14.99, "quantity": 1 },
+    { "id": 5, "receipt_barcode": "WHSE_2026-01-18_SYNTHETIC_SOUTH", "item_number": "9000004", "description": "SYNTHETIC LOOSE PRODUCE", "unit_price": 3.0, "quantity": 1.37 },
+    { "id": 6, "receipt_barcode": "SYNTH-ORD-1001", "item_number": "9000005", "description": "SYNTHETIC DESK LAMP", "unit_price": 39.99, "quantity": 1 },
+    { "id": 7, "receipt_barcode": "SYNTH-ORD-1001", "item_number": "9000005", "description": "SYNTHETIC DESK LAMP", "unit_price": 39.99, "quantity": 1 },
+    { "id": 8, "receipt_barcode": "99990000000000000004", "item_number": "9000006", "description": "", "unit_price": 3.3333333333333335, "quantity": 3 },
+    { "id": 9, "receipt_barcode": "99990000000000000005", "item_number": "9000007", "description": "SYNTHETIC BATTERIES", "unit_price": 0.0, "quantity": 2 },
+    { "id": 10, "receipt_barcode": "99990000000000000001", "item_number": "9000008", "description": "SYNTHETIC ZERO QUANTITY", "unit_price": 5.0, "quantity": 0 },
+    { "id": 11, "receipt_barcode": "99990000000000009999", "item_number": "9000009", "description": "SYNTHETIC ORPHAN", "unit_price": 1.0, "quantity": 1 },
+    { "id": 12, "receipt_barcode": "99990000000000000001", "item_number": "", "description": "SYNTHETIC NO ITEM NUMBER", "unit_price": 1.0, "quantity": 1 }
+  ],
+  "item_returns": [
+    { "id": 1, "transaction_barcode": "99990000000000000101", "item_number": "9000005", "return_date": "2026-02-20", "warehouse": "SYNTHETIC NORTH", "returned_quantity": 1, "description": "SYNTHETIC DESK LAMP", "transaction_type": "Refund", "merchandise_amount": 39.99, "transaction_total": -66.5 },
+    { "id": 2, "transaction_barcode": "99990000000000000101", "item_number": "9000001", "return_date": "2026-02-20", "warehouse": "SYNTHETIC NORTH", "returned_quantity": 1, "description": "SYNTHETIC PAPER TOWELS 12PK", "transaction_type": "Refund", "merchandise_amount": 21.99, "transaction_total": -66.5 },
+    { "id": 3, "transaction_barcode": "99990000000000000102", "item_number": "9000002", "return_date": "2026-02-01", "warehouse": "SYNTHETIC SOUTH", "returned_quantity": 0.5, "description": "", "transaction_type": "Sales", "merchandise_amount": null, "transaction_total": null },
+    { "id": 4, "transaction_barcode": "WHSE_2026-03-01_SYNTHETIC_NORTH", "item_number": "9000003", "return_date": "2026-03-01", "warehouse": "SYNTHETIC NORTH", "returned_quantity": 1, "description": "SYNTHETIC GROUND COFFEE", "transaction_type": "", "merchandise_amount": 14.99, "transaction_total": -14.99 },
+    { "id": 5, "transaction_barcode": "99990000000000000103", "item_number": "9000004", "return_date": "2026-03-05", "warehouse": "SYNTHETIC NORTH", "returned_quantity": 1, "description": "SYNTHETIC LOOSE PRODUCE", "transaction_type": "Refund", "merchandise_amount": 3.0, "transaction_total": -10.0 },
+    { "id": 6, "transaction_barcode": "99990000000000000103", "item_number": "9000006", "return_date": "2026-03-06", "warehouse": "SYNTHETIC NORTH", "returned_quantity": 1, "description": "SYNTHETIC SPLIT ITEM", "transaction_type": "Refund", "merchandise_amount": 7.0, "transaction_total": -10.0 }
+  ],
+  "price_adjustments": [
+    { "id": 1, "transaction_barcode": "99990000000000000201", "item_number": "9000001", "adjustment_date": "2026-01-25", "warehouse": "SYNTHETIC SOUTH", "adjustment_amount": 3.0, "adjusted_quantity": 1, "reference_line_number": "9100001", "transaction_type": "Sales", "transaction_total": -3.0 },
+    { "id": 2, "transaction_barcode": "99990000000000000202", "item_number": "9000003", "adjustment_date": "", "warehouse": "", "adjustment_amount": 5.0, "adjusted_quantity": null, "reference_line_number": "", "transaction_type": "", "transaction_total": -5.0 },
+    { "id": 3, "transaction_barcode": "99990000000000000203", "item_number": "9000002", "adjustment_date": "2026-02-10", "warehouse": "SYNTHETIC NORTH", "adjustment_amount": 1.5, "adjusted_quantity": 2, "reference_line_number": "9100002,9100003", "transaction_type": "Sales", "transaction_total": -1.5 }
+  ]
+}

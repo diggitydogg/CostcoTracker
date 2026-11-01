@@ -67,6 +67,20 @@ Backups use the `.costcotrackerbackup` file extension.
 
 Costco login cookies and web-session data are intentionally left out.
 
+### Optional: CostcoTracker Analytics
+
+If you run your own [CostcoTracker Analytics](https://github.com/diggitydogg/CostcoTracker-Analytics) website, CostcoTracker can upload your purchase history to it for long-term analytics.
+
+Go to **Data → CostcoTracker Analytics**, then enter a one-time connection code from the website.
+
+What gets uploaded:
+
+- Uploads happen after each successful Costco sync, or when you tap **Sync to Analytics**.
+- Costco sign-in details, receipt barcodes and order numbers never leave the phone.
+- The connection key lives only in the iOS Keychain and is not part of CostcoTracker backups.
+
+Details: [`docs/ANALYTICS_CLOUD_SYNC.md`](docs/ANALYTICS_CLOUD_SYNC.md).
+
 ## Install with SideStore
 
 Add this source to SideStore:

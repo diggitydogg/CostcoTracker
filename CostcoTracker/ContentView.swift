@@ -32,6 +32,9 @@ struct ContentView: View {
 
     @AppStorage("costco_last_successful_sync")
     private var lastSuccessfulSyncTimestamp: Double = 0
+
+    @ObservedObject private var analyticsCloud =
+        AnalyticsCloudSync.shared
     
     private enum PriceEntryField: Hashable {
         case itemNumber
@@ -176,6 +179,18 @@ struct ContentView: View {
                         }
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+
+
+                        // CostcoTracker Analytics asked for fresh data.
+                        if analyticsCloud.requestNeedsCostcoRefresh {
+
+                            Text(
+                                "CostcoTracker Analytics asked for fresh data. Sync your Costco purchases and it will be uploaded."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            .multilineTextAlignment(.center)
+                        }
                     }
 
 
@@ -742,6 +757,25 @@ struct ContentView: View {
                 dbCount =
                     DBManager.shared
                         .getReceiptCount()
+            }
+
+            // CostcoTracker Analytics: upload after a successful Costco sync.
+            // Detection uses the sync's own success timestamps; the Costco
+            // sync code itself is unchanged.
+            .onChange(of: showSyncBrowser) { _, isShown in
+
+                if isShown {
+
+                    AnalyticsCloudSync.shared
+                        .costcoRefreshWillBegin()
+
+                } else {
+
+                    Task {
+                        await AnalyticsCloudSync.shared
+                            .costcoRefreshDidEnd()
+                    }
+                }
             }
 
             .sheet(
