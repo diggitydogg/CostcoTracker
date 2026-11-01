@@ -163,8 +163,22 @@ struct UploadTests {
         #expect(!bodies.isEmpty)
         for key in try Fixtures.rawSourceKeys() { #expect(!bodies.contains(key)) }
         #expect(!bodies.contains("WHSE_"))
-        for name in ["cookie", "password", "session", "barcode", "\"token", "authorization"] {
-            #expect(!bodies.lowercased().contains(name), "body mentions \(name)")
+        // No credential- or barcode-like field *names* anywhere in any request body.
+        // (Values such as identifierKind "transactionBarcode" are contract enum values, not data.)
+        var fieldNames = Set<String>()
+        func collect(_ value: Any) {
+            if let object = value as? [String: Any] {
+                for (key, nested) in object { fieldNames.insert(key.lowercased()); collect(nested) }
+            } else if let array = value as? [Any] {
+                array.forEach(collect)
+            }
+        }
+        for body in h.server.log.compactMap(\.body) {
+            collect(try JSONSerialization.jsonObject(with: body))
+        }
+        #expect(fieldNames.contains("identifierkind")) // sanity: bodies were parsed
+        for name in ["cookie", "password", "session", "barcode", "token", "authorization", "ordernumber"] {
+            #expect(!fieldNames.contains { $0.contains(name) }, "field name mentions \(name)")
         }
         // The device token only ever travels in the Authorization header.
         #expect(!bodies.contains("token_1_"))
