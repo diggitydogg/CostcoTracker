@@ -461,23 +461,33 @@ final class AnalyticsCloudSync: ObservableObject {
         let runId = AnalyticsBatchPlanner.newRunID()
         let exportedAt = AnalyticsBatchPlanner.timestamp(now)
 
-        let prepared: (plan: AnalyticsUploadPlan, dataset: AnalyticsDataset, exclusions: [AnalyticsExclusionReason: Int])
+        let prepared: (plan: AnalyticsUploadPlan, exclusions: [AnalyticsExclusionReason: Int], fullSyncBlockedRows: Int)
         do {
             prepared = try await Task.detached(priority: .userInitiated) {
-                () throws -> (AnalyticsUploadPlan, AnalyticsDataset, [AnalyticsExclusionReason: Int]) in
+                () throws -> (AnalyticsUploadPlan, [AnalyticsExclusionReason: Int], Int) in
                 let dataset = AnalyticsExportBuilder.build(snapshot, ids: deriver)
                 var exclusions = dataset.exclusions
                 let units = try AnalyticsBatchPlanner.units(for: dataset, exclusions: &exclusions)
-                let plan = try AnalyticsBatchPlanner.plan(
-                    units: units,
-                    mode: mode,
-                    uploadedHashes: uploaded,
-                    requestId: requestId,
-                    runId: runId,
-                    exportedAt: exportedAt,
-                    now: now
-                )
-                return (plan, dataset, exclusions)
+                func plan(_ mode: AnalyticsSyncMode) throws -> AnalyticsUploadPlan {
+                    try AnalyticsBatchPlanner.plan(
+                        units: units,
+                        mode: mode,
+                        exclusions: exclusions,
+                        uploadedHashes: uploaded,
+                        requestId: requestId,
+                        runId: runId,
+                        exportedAt: exportedAt,
+                        now: now
+                    )
+                }
+                do {
+                    return (try plan(mode), exclusions, 0)
+                } catch AnalyticsPlanError.fullSyncBlocked(let rows) {
+                    // Records that exist locally can't be listed in the manifest, so a
+                    // full sync could tombstone them. Upload changes only (never
+                    // tombstones) and leave the full check undone.
+                    return (try plan(.incremental), exclusions, rows)
+                }
             }.value
         } catch {
             recordError("Couldn't prepare the upload. Nothing was uploaded.")
@@ -489,12 +499,17 @@ final class AnalyticsCloudSync: ObservableObject {
             log.notice("Analytics export excluded \(excluded, privacy: .public) row(s) that cannot be represented")
         }
 
+        let note = Self.exclusionNote(excluded) + Self.fullSyncBlockedNote(prepared.fullSyncBlockedRows)
+        if prepared.fullSyncBlockedRows > 0 {
+            log.notice("Analytics full check skipped: \(prepared.fullSyncBlockedRows, privacy: .public) local record(s) cannot be listed in the manifest")
+        }
+
         if prepared.plan.batches.isEmpty && prepared.plan.mode == .incremental && requestId == nil {
-            recordSuccess(summary: "Already up to date" + Self.exclusionNote(excluded), mode: .incremental, runStatus: nil)
+            recordSuccess(summary: "Already up to date" + note, mode: .incremental, runStatus: nil)
             return
         }
 
-        _ = await runPlan(prepared.plan, excluded: excluded)
+        _ = await runPlan(prepared.plan, note: note)
     }
 
     /// Resumes an interrupted upload, if any.
@@ -519,7 +534,7 @@ final class AnalyticsCloudSync: ObservableObject {
     /// - completed: uploaded; - stop: try again later (offline/revoked);
     /// - discarded: the run can never finish and its plan was dropped.
     @discardableResult
-    private func runPlan(_ plan: AnalyticsUploadPlan, excluded: Int = 0) async -> RunResult {
+    private func runPlan(_ plan: AnalyticsUploadPlan, note: String = "") async -> RunResult {
         activity = plan.mode == .full ? "Uploading (full check)…" : "Uploading…"
         do {
             let outcome = try await uploader().upload(plan) { [weak self] progress in
@@ -539,7 +554,7 @@ final class AnalyticsCloudSync: ObservableObject {
                 if status == "needs_review" {
                     summary += ". \(pending) record\(pending == 1 ? "" : "s") no longer on this iPhone are waiting for your review on the website"
                 }
-                recordSuccess(summary: summary + Self.exclusionNote(excluded), mode: plan.mode, runStatus: status, runId: plan.runId)
+                recordSuccess(summary: summary + note, mode: plan.mode, runStatus: status, runId: plan.runId)
             }
             return .completed
         } catch AnalyticsUploadFailure.unauthenticated {
@@ -594,6 +609,10 @@ final class AnalyticsCloudSync: ObservableObject {
 
     static func keyFingerprint(_ idKey: String) -> String {
         SHA256.hash(data: Data(idKey.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    static func fullSyncBlockedNote(_ rows: Int) -> String {
+        rows == 0 ? "" : ". Full check skipped: \(rows) record\(rows == 1 ? "" : "s") on this iPhone can't be uploaded (too large or inconsistent), so the cloud can't safely check for removed records. Only changes were uploaded"
     }
 
     static func exclusionNote(_ excluded: Int) -> String {

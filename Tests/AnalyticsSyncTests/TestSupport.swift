@@ -52,6 +52,15 @@ enum Fixtures {
         )
     }
 
+    /// The fixture without its deliberately inconsistent return transaction, so
+    /// nothing that hides an existing record from a full-sync manifest is
+    /// excluded and full syncs are allowed. (Item-level exclusions remain.)
+    static func cleanSourceSnapshot() throws -> SourceSnapshot {
+        var snapshot = try sourceSnapshot()
+        snapshot.returns.removeAll { $0.transactionBarcode == "99990000000000000103" }
+        return snapshot
+    }
+
     /// Every raw source key in the fixture; none may ever appear in an upload.
     static func rawSourceKeys() throws -> [String] {
         let s = try sourceSnapshot()
@@ -426,7 +435,7 @@ struct Harness {
             lastOnlineSync: clock.now.addingTimeInterval(-60),
             onlineBackfillComplete: true
         )
-        let source = SourceState(snapshot: try snapshot ?? Fixtures.sourceSnapshot(), status: fresh)
+        let source = SourceState(snapshot: try snapshot ?? Fixtures.cleanSourceSnapshot(), status: fresh)
         let defaults = defaults ?? UserDefaults(suiteName: "analytics-test-\(UUID().uuidString)")!
         let directory = stateDirectory ?? FileManager.default.temporaryDirectory.appendingPathComponent("analytics-test-\(UUID().uuidString)")
         let sync = AnalyticsCloudSync(

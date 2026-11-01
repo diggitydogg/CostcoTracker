@@ -11,9 +11,14 @@ struct BatchPlannerTests {
         return try AnalyticsBatchPlanner.units(for: dataset, exclusions: &exclusions)
     }
 
-    private func plan(_ units: [AnalyticsUploadUnit], _ mode: AnalyticsSyncMode, uploaded: [String: String] = [:]) throws -> AnalyticsUploadPlan {
+    private func plan(
+        _ units: [AnalyticsUploadUnit],
+        _ mode: AnalyticsSyncMode,
+        uploaded: [String: String] = [:],
+        exclusions: [AnalyticsExclusionReason: Int] = [:]
+    ) throws -> AnalyticsUploadPlan {
         try AnalyticsBatchPlanner.plan(
-            units: units, mode: mode, uploadedHashes: uploaded, requestId: nil,
+            units: units, mode: mode, exclusions: exclusions, uploadedHashes: uploaded, requestId: nil,
             runId: AnalyticsBatchPlanner.newRunID(), exportedAt: "2026-11-01T12:00:00Z", now: Date()
         )
     }
@@ -84,6 +89,25 @@ struct BatchPlannerTests {
         let units = try AnalyticsBatchPlanner.units(for: dataset, exclusions: &exclusions)
         #expect(units.isEmpty)
         #expect(exclusions[.unitTooLarge] == 251)
+    }
+
+    @Test("Full plans are refused while any existing record is excluded; incremental plans are not")
+    func fullPlanRefusedWhenRecordsHidden() throws {
+        let units = try units()
+        for reason in AnalyticsExclusionReason.allCases where reason.hidesExistingRecordFromManifest {
+            #expect(throws: AnalyticsPlanError.fullSyncBlocked(rows: 3)) {
+                try plan(units, .full, exclusions: [reason: 3])
+            }
+            #expect(try plan(units, .incremental, exclusions: [reason: 3]).manifest == nil)
+        }
+        let harmless: [AnalyticsExclusionReason: Int] = [
+            .itemOrphan: 1, .itemInvalidQuantity: 1, .itemMissingItemNumber: 1, .itemInvalidPrice: 1,
+            .receiptMissingKey: 1, .returnMissingKey: 1, .adjustmentMissingKey: 1,
+        ]
+        #expect(try plan(units, .full, exclusions: harmless).manifest != nil)
+        #expect(throws: AnalyticsPlanError.fullSyncBlocked(rows: 7)) {
+            try plan(units, .full, exclusions: harmless.merging([.unitTooLarge: 5, .transactionInconsistent: 2]) { a, _ in a })
+        }
     }
 
     @Test("Batch bodies are deterministic for identical input")

@@ -206,7 +206,7 @@ struct UploadTests {
 
     @Test("Full sync sends a manifest; a small removal is reconciled by the server")
     func fullSyncReconciles() async throws {
-        var snapshot = try Fixtures.sourceSnapshot()
+        var snapshot = try Fixtures.cleanSourceSnapshot()
         for i in 0..<20 {
             snapshot.receipts.append(SourceReceiptRow(barcode: "99990000000000001\(100 + i)", date: "2026-03-01", warehouse: "SYNTHETIC"))
         }
@@ -292,7 +292,7 @@ struct RetryResumeTests {
 
     @Test("An interrupted upload resumes from the server's received batches without duplicates")
     func resume() async throws {
-        var snapshot = try Fixtures.sourceSnapshot()
+        var snapshot = try Fixtures.cleanSourceSnapshot()
         for r in 0..<20 {
             let barcode = "9999000000000000\(2000 + r)"
             snapshot.receipts.append(SourceReceiptRow(barcode: barcode, date: "2026-01-01", warehouse: "SYNTHETIC"))
@@ -474,5 +474,134 @@ struct BackupRestoreIdentityTests {
         let relaunched = h.relaunched()
         #expect(relaunched.connection == .disconnected)
         #expect(h.defaults.string(forKey: AnalyticsCloudDefaultsKey.deviceId) == nil)
+    }
+}
+
+@Suite("Full-sync manifest safety")
+struct FullSyncManifestSafetyTests {
+
+    private func startBodies(_ server: FakeAnalyticsServer) throws -> [[String: Any]] {
+        try server.log
+            .filter { $0.method == "POST" && $0.path == "/api/sync/runs" }
+            .map { try JSONSerialization.jsonObject(with: $0.body!) as! [String: Any] }
+    }
+
+    private func completeBodies(_ server: FakeAnalyticsServer) -> [String] {
+        server.log
+            .filter { $0.method == "POST" && $0.path.hasSuffix("/complete") }
+            .map { String(decoding: $0.body ?? Data(), as: UTF8.self) }
+    }
+
+    @Test("An existing receipt that grows too large for a batch is never marked missing by a full sync")
+    func oversizedExistingReceipt() async throws {
+        let h = try Harness.make()
+        try await h.connect()
+        await h.sync.sync(trigger: .manual, forceMode: .full)
+        let ids = try AnalyticsIDDeriver(idKey: Fixtures.idKey)
+        let receiptId = ids.receiptID(barcode: "99990000000000000001")
+        #expect(h.server.receipts[receiptId] != nil)
+        let firstFullSync = try #require(h.sync.lastFullSyncAt)
+        let runsBefore = h.server.runs.count
+
+        // The same receipt now has 250 items: its unit exceeds the 200-row batch limit.
+        h.source.snapshot.items += (0..<250).map {
+            SourceItemRow(rowID: Int64(50_000 + $0), receiptBarcode: "99990000000000000001", itemNumber: "\(8_000_000 + $0)",
+                          description: "SYNTHETIC BULK", unitPrice: 1, quantity: 1)
+        }
+        // Another receipt also changed, so there is something uploadable.
+        let other = try #require(h.source.snapshot.items.firstIndex { $0.receiptBarcode == "WHSE_2026-01-18_SYNTHETIC_SOUTH" })
+        h.source.snapshot.items[other].unitPrice = 21.49
+        h.clock.now = h.clock.now.addingTimeInterval(8 * 24 * 3600)
+        await h.sync.sync(trigger: .manual, forceMode: .full)
+
+        // The oversized receipt was never tombstoned and is still in the cloud.
+        #expect(!h.server.tombstoned.contains(receiptId))
+        #expect(h.server.receipts[receiptId] != nil)
+        #expect(h.server.tombstoned.isEmpty)
+        // No second full run: the new run is incremental and sends no manifest.
+        let starts = try startBodies(h.server)
+        #expect(starts.count == runsBefore + 1)
+        #expect(starts.first?["mode"] as? String == "full")
+        #expect(starts.last?["mode"] as? String == "incremental")
+        let completes = completeBodies(h.server)
+        #expect(completes.first?.contains("manifest") == true)
+        #expect(completes.last?.contains("manifest") == false)
+        // Only the other, changed receipt was uploaded.
+        let lastPut = try #require(h.server.requests(method: "PUT", pathPrefix: "/api/sync/runs").last?.body)
+        let batch = try JSONSerialization.jsonObject(with: lastPut) as! [String: [[String: Any]]]
+        #expect(batch["receipts"]?.map { $0["id"] as? String } == [ids.receiptID(barcode: "WHSE_2026-01-18_SYNTHETIC_SOUTH")])
+        // The full check is reported as skipped (with the excluded rows) and not recorded as done.
+        #expect(h.sync.lastFullSyncAt == firstFullSync)
+        #expect(h.sync.lastUploadSummary?.contains("Full check skipped: 253 records") == true)
+        #expect(h.sync.lastUploadSummary?.contains("257 records couldn't be represented") == true)
+        #expect(h.sync.lastError == nil)
+    }
+
+    @Test("A previously uploaded transaction that becomes inconsistent is never marked missing")
+    func inconsistentExistingTransaction() async throws {
+        let h = try Harness.make()
+        try await h.connect()
+        await h.sync.sync(trigger: .manual, forceMode: .full)
+        let ids = try AnalyticsIDDeriver(idKey: Fixtures.idKey)
+        let lampReturn = ids.returnID(transactionBarcode: "99990000000000000101", itemNumber: "9000005")
+        #expect(h.server.returns[lampReturn] != nil)
+
+        // One row of the transaction now disagrees on the date: the whole transaction is excluded.
+        let index = try #require(h.source.snapshot.returns.firstIndex { $0.transactionBarcode == "99990000000000000101" })
+        h.source.snapshot.returns[index].returnDate = "2026-02-21"
+        let firstFullSync = h.sync.lastFullSyncAt
+        h.clock.now = h.clock.now.addingTimeInterval(8 * 24 * 3600)
+        await h.sync.sync(trigger: .manual, forceMode: .full)
+
+        #expect(h.server.tombstoned.isEmpty)
+        #expect(h.server.returns[lampReturn] != nil)
+        // Only the first run was full; nothing else changed, so no further run was needed.
+        #expect(try startBodies(h.server).map { $0["mode"] as? String } == ["full"])
+        #expect(h.sync.lastFullSyncAt == firstFullSync)
+        #expect(h.sync.lastUploadSummary?.contains("Full check skipped: 2 records") == true)
+    }
+
+    @Test("The automatic weekly full check is skipped the same way")
+    func automaticFullCheckBlocked() async throws {
+        let h = try Harness.make(snapshot: try Fixtures.sourceSnapshot()) // contains an inconsistent transaction
+        try await h.connect()
+        #expect(h.sync.decideMode(for: .afterCostcoRefresh(partial: false)) == .full)
+        h.sync.costcoRefreshWillBegin()
+        h.source.status.lastWarehouseSync = h.clock.now.addingTimeInterval(1)
+        h.source.status.lastOnlineSync = h.clock.now.addingTimeInterval(1)
+        await h.sync.costcoRefreshDidEnd()
+        #expect(try startBodies(h.server).map { $0["mode"] as? String } == ["incremental"])
+        #expect(h.sync.lastFullSyncAt == nil)
+        #expect(h.server.receipts.count == 5) // everything uploadable still went up
+    }
+
+    @Test("Item-only exclusions do not block a full sync (items are not in the manifest)")
+    func itemExclusionsDoNotBlock() async throws {
+        let h = try Harness.make() // clean fixture still has orphan / zero-quantity / no-number items
+        try await h.connect()
+        await h.sync.sync(trigger: .manual, forceMode: .full)
+        #expect(try startBodies(h.server).last?["mode"] as? String == "full")
+        #expect(h.sync.lastFullSyncAt != nil)
+    }
+
+    @Test("Why IDs can't simply be added: the server rejects a manifest listing rows not sent in the run")
+    func serverRejectsExtraManifestIDs() async throws {
+        let h = try Harness.make()
+        try await h.connect()
+        let client = AnalyticsAPIClient(
+            baseURL: AnalyticsCloudDefaults.productionURL,
+            transport: h.server,
+            deviceToken: { h.secrets.read(AnalyticsSecretAccount.deviceToken) }
+        )
+        let runId = AnalyticsBatchPlanner.newRunID()
+        _ = try await client.startRun(runId: runId, mode: .full, exportedAt: "2026-11-01T12:00:00Z", requestId: nil)
+        let manifest = AnalyticsManifest(receiptIds: ["r_notSentInThisRun0000000"], returnIds: [], priceAdjustmentIds: [])
+        do {
+            _ = try await client.completeRun(runId: runId, batchCount: 0, manifest: manifest)
+            Issue.record("the server accepted a manifest ID that was not uploaded in the run")
+        } catch let error as AnalyticsAPIError {
+            #expect(error.code == "manifest_mismatch")
+            #expect(error.status == 409)
+        }
     }
 }

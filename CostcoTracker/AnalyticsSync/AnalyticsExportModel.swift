@@ -175,6 +175,24 @@ nonisolated enum AnalyticsExclusionReason: String, CaseIterable, Sendable {
     case adjustmentMissingTransactionTotal = "adjustment.missingTransactionTotal"
     case transactionInconsistent = "transaction.inconsistent"
     case unitTooLarge = "upload.unitTooLarge"
+
+    /// True when the excluded row is a receipt, return or price adjustment that
+    /// exists locally with a derivable export ID (and may already be in the
+    /// cloud). Such a row is missing from a full-sync manifest, so the server
+    /// would treat it as deleted; a full sync must not run while any exist.
+    /// Item rows (not part of the manifest) and rows without a source key
+    /// (never had an ID) do not affect reconciliation.
+    var hidesExistingRecordFromManifest: Bool {
+        switch self {
+        case .unitTooLarge, .transactionInconsistent,
+             .returnInvalidQuantity, .returnInvalidAmount,
+             .adjustmentInvalidAmount, .adjustmentMissingTransactionTotal:
+            return true
+        case .receiptMissingKey, .returnMissingKey, .adjustmentMissingKey,
+             .itemOrphan, .itemMissingItemNumber, .itemInvalidQuantity, .itemInvalidPrice:
+            return false
+        }
+    }
 }
 
 /// The complete in-memory Analytics dataset built from the local database.

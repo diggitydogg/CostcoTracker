@@ -60,6 +60,22 @@ These are additive only. The Costco sync engine (`CostcoSyncView`) and `DBManage
 - **When:** only after a fully successful Costco refresh (or a manual sync), with online history backfill complete. Never after a partial refresh.
 - **What the server does:** tombstones cloud records that are no longer on the phone. If that would remove more than 20% (or more than 50 rows), it holds them for review on the website.
 - **Local data:** the app never deletes local or analytics history itself.
+- **Safety guard:** a full sync never runs while a record that exists on the phone can't be uploaded.
+
+#### Why the safety guard is needed
+Some local records can't be uploaded:
+- a receipt too large for one batch (more than 199 items);
+- a return/adjustment transaction whose rows disagree;
+- a return/adjustment with an invalid quantity or amount.
+
+The backend requires the manifest to list exactly the rows sent in the run (`409 manifest_mismatch`), so these records can't appear in it. Leaving them out would make the server tombstone them.
+
+#### What happens instead
+- The app uploads changes only (incremental, which never tombstones).
+- The full check is not recorded as done.
+- The status says "Full check skipped: N records … can't be uploaded".
+
+Item-level exclusions don't block a full sync, because items aren't in the manifest. Rows without a source key don't block either, because they never had an ID.
 
 ### Website "Refresh from Costco" requests
 The Costco refresh is interactive: a signed-in web view in the Costco sync sheet. It cannot run silently, and the phone cannot be woken instantly.
@@ -163,7 +179,7 @@ The vectors and the golden export come from `Tests/AnalyticsSyncTests/Fixtures/m
 - transactions whose rows disagree on date, warehouse, type or total;
 - units too big for a batch.
 
-The settings screen shows how many were skipped.
+The settings screen shows how many were skipped. Excluded receipts, returns and adjustments also block full checks (see above), because the backend can't be told they still exist.
 
 ## Secrets, metadata and backup/restore
 

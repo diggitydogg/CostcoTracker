@@ -54,6 +54,16 @@ nonisolated struct AnalyticsUploadPlan: Codable, Sendable {
     var createdAt: Date
 }
 
+nonisolated enum AnalyticsPlanError: Error, Equatable {
+    /// A full sync was requested, but `rows` locally present receipts/returns/
+    /// adjustments cannot be uploaded (e.g. a receipt too large for one batch,
+    /// or an inconsistent transaction). Their IDs cannot be listed in the
+    /// manifest — the server requires the manifest to match exactly the rows
+    /// sent in the run (409 manifest_mismatch) — and leaving them out would
+    /// make the server tombstone them. So no full sync is planned at all.
+    case fullSyncBlocked(rows: Int)
+}
+
 nonisolated enum AnalyticsBatchPlanner {
 
     static let maxRowsPerBatch = 200
@@ -107,15 +117,22 @@ nonisolated enum AnalyticsBatchPlanner {
     /// - incremental: only units whose hash differs from `uploadedHashes`.
     /// - full: every unit, plus the manifest of every record ID, so the server
     ///   can reconcile (and hold back large removals for owner review).
+    ///   Refused with `.fullSyncBlocked` if `exclusions` contains any row that
+    ///   exists locally but would be absent from the manifest.
     static func plan(
         units: [AnalyticsUploadUnit],
         mode: AnalyticsSyncMode,
+        exclusions: [AnalyticsExclusionReason: Int],
         uploadedHashes: [String: String],
         requestId: String?,
         runId: String,
         exportedAt: String,
         now: Date
     ) throws -> AnalyticsUploadPlan {
+        if mode == .full {
+            let hidden = exclusions.filter { $0.key.hidesExistingRecordFromManifest }.values.reduce(0, +)
+            if hidden > 0 { throw AnalyticsPlanError.fullSyncBlocked(rows: hidden) }
+        }
         let selected = mode == .full ? units : units.filter { uploadedHashes[$0.key] != $0.hash }
 
         var batches: [Data] = []
